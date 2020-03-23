@@ -5,3 +5,8 @@
 /build
 .externalNativeBuild
 *.iml
+*.project
+*.classpath
+*.settings
+.vscode
+scanlibrary
