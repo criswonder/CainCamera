@@ -49,6 +49,7 @@ public:
 
     void reset(T localRef = NULL) {
         if (mLocalRef != NULL) {
+            //todo https://zh.cppreference.com/w/cpp/language/reinterpret_cast
             (*mEnv)->DeleteLocalRef(reinterpret_cast<JNIEnv*>(mEnv), mLocalRef);
             mLocalRef = localRef;
         }

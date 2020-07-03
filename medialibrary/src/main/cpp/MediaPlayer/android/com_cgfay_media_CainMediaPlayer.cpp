@@ -48,6 +48,12 @@ private:
     jobject mObject;
 };
 
+/**
+ *
+ * @param env
+ * @param thiz CainMediaPlayer 的this
+ * @param weak_thiz CainMediaPlayer 的this的弱应用
+ */
 JNIMediaPlayerListener::JNIMediaPlayerListener(JNIEnv *env, jobject thiz, jobject weak_thiz) {
 // Hold onto the MediaPlayer class for use in calling the static method
     // that posts events to the application thread.

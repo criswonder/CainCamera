@@ -1,5 +1,7 @@
 package com.cgfay.media.recorder;
 
+import android.util.Log;
+
 import java.nio.ShortBuffer;
 import java.util.Arrays;
 
@@ -41,22 +43,28 @@ import java.util.Arrays;
     private int minDiff;
     private int maxDiff;
 
+    private String TAG = "Sonic";
+    private boolean VERBOSE = true;
+
     /**
      * Creates a new Sonic audio stream processor.
      *
-     * @param inputSampleRateHz The sample rate of input audio, in hertz.
-     * @param numChannels The number of channels in the input audio.
-     * @param speed The speedup factor for output audio.
-     * @param pitch The pitch factor for output audio.
+     * @param inputSampleRateHz  The sample rate of input audio, in hertz.
+     * @param numChannels        The number of channels in the input audio.
+     * @param speed              The speedup factor for output audio.
+     * @param pitch              The pitch factor for output audio.
      * @param outputSampleRateHz The sample rate for output audio, in hertz.
      */
     public Sonic(int inputSampleRateHz, int numChannels, float speed, float pitch,
                  int outputSampleRateHz) {
+        if (VERBOSE)
+            Log.d(TAG, "Sonic() called with: inputSampleRateHz = [" + inputSampleRateHz + "], numChannels = [" + numChannels + "], speed = [" + speed + "], pitch = [" + pitch + "], outputSampleRateHz = [" + outputSampleRateHz + "]");
         this.inputSampleRateHz = inputSampleRateHz;
         this.numChannels = numChannels;
         minPeriod = inputSampleRateHz / MAXIMUM_PITCH;
         maxPeriod = inputSampleRateHz / MINIMUM_PITCH;
         maxRequired = 2 * maxPeriod;
+        if (VERBOSE) Log.d(TAG, "Sonic: maxRequired=" + maxRequired);
         downSampleBuffer = new short[maxRequired];
         inputBufferSize = maxRequired;
         inputBuffer = new short[maxRequired * numChannels];
@@ -79,10 +87,12 @@ import java.util.Arrays;
      * @param buffer A {@link ShortBuffer} containing input data between its position and limit.
      */
     public void queueInput(ShortBuffer buffer) {
+        if (VERBOSE) Log.d(TAG, "queueInput() called with: buffer = [" + buffer + "]");
         int samplesToWrite = buffer.remaining() / numChannels;
         int bytesToWrite = samplesToWrite * numChannels * 2;
         enlargeInputBufferIfNeeded(samplesToWrite);
         buffer.get(inputBuffer, numInputSamples * numChannels, bytesToWrite / 2);
+        if (VERBOSE) Log.d(TAG, "queueInput: samplesToWrite=" + samplesToWrite);
         numInputSamples += samplesToWrite;
         processStreamInput();
     }
@@ -94,6 +104,7 @@ import java.util.Arrays;
      * @param buffer A {@link ShortBuffer} into which output will be written.
      */
     public void getOutput(ShortBuffer buffer) {
+        if (VERBOSE) Log.d(TAG, "getOutput() called with: buffer = [" + buffer + "]");
         int samplesToRead = Math.min(buffer.remaining() / numChannels, numOutputSamples);
         buffer.put(outputBuffer, 0, samplesToRead * numChannels);
         numOutputSamples -= samplesToRead;
@@ -106,6 +117,7 @@ import java.util.Arrays;
      * added to the output, but flushing in the middle of words could introduce distortion.
      */
     public void queueEndOfStream() {
+        if (VERBOSE) Log.d(TAG, "queueEndOfStream: ");
         int remainingSamples = numInputSamples;
         float s = speed / pitch;
         float r = rate * pitch;
@@ -133,12 +145,15 @@ import java.util.Arrays;
      * Returns the number of output samples that can be read with {@link #getOutput(ShortBuffer)}.
      */
     public int getSamplesAvailable() {
+        if (VERBOSE) Log.d(TAG, "getSamplesAvailable: ");
         return numOutputSamples;
     }
 
     // Internal methods.
 
     private void enlargeOutputBufferIfNeeded(int numSamples) {
+        if (VERBOSE)
+            Log.d(TAG, "enlargeOutputBufferIfNeeded() called with: numSamples = [" + numSamples + "]");
         if (numOutputSamples + numSamples > outputBufferSize) {
             outputBufferSize += (outputBufferSize / 2) + numSamples;
             outputBuffer = Arrays.copyOf(outputBuffer, outputBufferSize * numChannels);
@@ -146,6 +161,8 @@ import java.util.Arrays;
     }
 
     private void enlargeInputBufferIfNeeded(int numSamples) {
+        if (VERBOSE)
+            Log.d(TAG, "enlargeInputBufferIfNeeded() called with: numSamples = [" + numSamples + "]");
         if (numInputSamples + numSamples > inputBufferSize) {
             inputBufferSize += (inputBufferSize / 2) + numSamples;
             inputBuffer = Arrays.copyOf(inputBuffer, inputBufferSize * numChannels);
@@ -153,6 +170,8 @@ import java.util.Arrays;
     }
 
     private void removeProcessedInputSamples(int position) {
+        if (VERBOSE)
+            Log.d(TAG, "removeProcessedInputSamples() called with: position = [" + position + "]");
         int remainingSamples = numInputSamples - position;
         System.arraycopy(inputBuffer, position * numChannels, inputBuffer, 0,
                 remainingSamples * numChannels);
@@ -160,6 +179,8 @@ import java.util.Arrays;
     }
 
     private void copyToOutput(short[] samples, int position, int numSamples) {
+        if (VERBOSE)
+            Log.d(TAG, "copyToOutput() called with: samples = [" + samples + "], position = [" + position + "], numSamples = [" + numSamples + "]");
         enlargeOutputBufferIfNeeded(numSamples);
         System.arraycopy(samples, position * numChannels, outputBuffer, numOutputSamples * numChannels,
                 numSamples * numChannels);
@@ -167,6 +188,7 @@ import java.util.Arrays;
     }
 
     private int copyInputToOutput(int position) {
+        if (VERBOSE) Log.d(TAG, "copyInputToOutput() called with: position = [" + position + "]");
         int numSamples = Math.min(maxRequired, remainingInputToCopy);
         copyToOutput(inputBuffer, position, numSamples);
         remainingInputToCopy -= numSamples;
@@ -174,6 +196,8 @@ import java.util.Arrays;
     }
 
     private void downSampleInput(short[] samples, int position, int skip) {
+        if (VERBOSE)
+            Log.d(TAG, "downSampleInput() called with: samples = [" + samples + "], position = [" + position + "], skip = [" + skip + "]");
         // If skip is greater than one, average skip samples together and write them to the down-sample
         // buffer. If numChannels is greater than one, mix the channels together as we down sample.
         int numSamples = maxRequired / skip;
@@ -190,6 +214,8 @@ import java.util.Arrays;
     }
 
     private int findPitchPeriodInRange(short[] samples, int position, int minPeriod, int maxPeriod) {
+        if (VERBOSE)
+            Log.d(TAG, "findPitchPeriodInRange() called with: samples = [" + samples + "], position = [" + position + "], minPeriod = [" + minPeriod + "], maxPeriod = [" + maxPeriod + "]");
         // Find the best frequency match in the range, and given a sample skip multiple. For now, just
         // find the pitch of the first channel.
         int bestPeriod = 0;
@@ -226,6 +252,8 @@ import java.util.Arrays;
      * at the abrupt end of voiced words.
      */
     private boolean previousPeriodBetter(int minDiff, int maxDiff, boolean preferNewPeriod) {
+        if (VERBOSE)
+            Log.d(TAG, "previousPeriodBetter() called with: minDiff = [" + minDiff + "], maxDiff = [" + maxDiff + "], preferNewPeriod = [" + preferNewPeriod + "]");
         if (minDiff == 0 || prevPeriod == 0) {
             return false;
         }
@@ -247,6 +275,9 @@ import java.util.Arrays;
     }
 
     private int findPitchPeriod(short[] samples, int position, boolean preferNewPeriod) {
+        if (VERBOSE)
+            Log.d(TAG, "findPitchPeriod() called with: samples = [" + samples + "], " +
+                    "position = [" + position + "], preferNewPeriod = [" + preferNewPeriod + "]");
         // Find the pitch period. This is a critical step, and we may have to try multiple ways to get a
         // good answer. This version uses AMDF. To improve speed, we down sample by an integer factor
         // get in the 11 kHz range, and then do it again with a narrower frequency range without down
@@ -288,6 +319,8 @@ import java.util.Arrays;
     }
 
     private void moveNewSamplesToPitchBuffer(int originalNumOutputSamples) {
+        if (VERBOSE)
+            Log.d(TAG, "moveNewSamplesToPitchBuffer() called with: originalNumOutputSamples = [" + originalNumOutputSamples + "]");
         int numSamples = numOutputSamples - originalNumOutputSamples;
         if (numPitchSamples + numSamples > pitchBufferSize) {
             pitchBufferSize += (pitchBufferSize / 2) + numSamples;
@@ -300,6 +333,8 @@ import java.util.Arrays;
     }
 
     private void removePitchSamples(int numSamples) {
+        if (VERBOSE)
+            Log.d(TAG, "removePitchSamples() called with: numSamples = [" + numSamples + "]");
         if (numSamples == 0) {
             return;
         }
@@ -309,6 +344,8 @@ import java.util.Arrays;
     }
 
     private short interpolate(short[] in, int inPos, int oldSampleRate, int newSampleRate) {
+        if (VERBOSE)
+            Log.d(TAG, "interpolate() called with: in = [" + in + "], inPos = [" + inPos + "], oldSampleRate = [" + oldSampleRate + "], newSampleRate = [" + newSampleRate + "]");
         short left = in[inPos];
         short right = in[inPos + numChannels];
         int position = newRatePosition * oldSampleRate;
@@ -320,6 +357,8 @@ import java.util.Arrays;
     }
 
     private void adjustRate(float rate, int originalNumOutputSamples) {
+        if (VERBOSE)
+            Log.d(TAG, "adjustRate() called with: rate = [" + rate + "], originalNumOutputSamples = [" + originalNumOutputSamples + "]");
         if (numOutputSamples == originalNumOutputSamples) {
             return;
         }
@@ -355,6 +394,8 @@ import java.util.Arrays;
     }
 
     private int skipPitchPeriod(short[] samples, int position, float speed, int period) {
+        if (VERBOSE)
+            Log.d(TAG, "skipPitchPeriod() called with: samples = [" + samples + "], position = [" + position + "], speed = [" + speed + "], period = [" + period + "]");
         // Skip over a pitch period, and copy period/speed samples to the output.
         int newSamples;
         if (speed >= 2.0f) {
@@ -371,6 +412,8 @@ import java.util.Arrays;
     }
 
     private int insertPitchPeriod(short[] samples, int position, float speed, int period) {
+        if (VERBOSE)
+            Log.d(TAG, "insertPitchPeriod() called with: samples = [" + samples + "], position = [" + position + "], speed = [" + speed + "], period = [" + period + "]");
         // Insert a pitch period, and determine how much input to copy directly.
         int newSamples;
         if (speed < 0.5f) {
@@ -389,27 +432,39 @@ import java.util.Arrays;
     }
 
     private void changeSpeed(float speed) {
+        if (VERBOSE) Log.d(TAG, "changeSpeed() called with: speed = [" + speed + "]");
         if (numInputSamples < maxRequired) {
             return;
         }
         int numSamples = numInputSamples;
         int position = 0;
+        int loop = 1;
         do {
+            if (VERBOSE) Log.d(TAG, "changeSpeed: loop=" + loop);
             if (remainingInputToCopy > 0) {
                 position += copyInputToOutput(position);
+                if (VERBOSE) {
+                    Log.d(TAG, "changeSpeed: remainingInputToCopy=" + remainingInputToCopy+
+                            ",position="+position);
+                }
             } else {
                 int period = findPitchPeriod(inputBuffer, position, true);
                 if (speed > 1.0) {
-                    position += period + skipPitchPeriod(inputBuffer, position, speed, period);
+                    int skipped = skipPitchPeriod(inputBuffer, position, speed, period);
+                    if (VERBOSE) Log.d(TAG, String.format("changeSpeed: period=%d,skipped=%d",
+                            period,skipped));
+                    position += period + skipped;
                 } else {
                     position += insertPitchPeriod(inputBuffer, position, speed, period);
                 }
             }
+            loop++;
         } while (position + maxRequired <= numSamples);
         removeProcessedInputSamples(position);
     }
 
     private void processStreamInput() {
+        if (VERBOSE) Log.d(TAG, "processStreamInput() called");
         // Resample as many pitch periods as we have buffered on the input.
         int originalNumOutputSamples = numOutputSamples;
         float s = speed / pitch;
@@ -427,6 +482,10 @@ import java.util.Arrays;
 
     private static void overlapAdd(int numSamples, int numChannels, short[] out, int outPos,
                                    short[] rampDown, int rampDownPos, short[] rampUp, int rampUpPos) {
+        if (true)
+            Log.d("Sonic", "overlapAdd() called with: numSamples = [" + numSamples + "], " +
+                    "numChannels = [" + numChannels + "], out = [" + out + "], outPos = [" + outPos + "], rampDown = [" + rampDown +
+                    "], rampDownPos = [" + rampDownPos + "], rampUp = [" + rampUp + "], rampUpPos = [" + rampUpPos + "]");
         for (int i = 0; i < numChannels; i++) {
             int o = outPos * numChannels + i;
             int u = rampUpPos * numChannels + i;

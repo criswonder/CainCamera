@@ -15,6 +15,7 @@ import java.nio.ByteBuffer;
 
 /**
  * 视频编码器
+ *
  * @author CainHuang
  * @date 2019/6/30
  */
@@ -78,7 +79,7 @@ final class VideoEncoder {
             format.setInteger(MediaFormat.KEY_PROFILE, profile);
             // API 23以后可以设置AVC的编码level，低于23设置了但不生效
 //            if (Build.VERSION.SDK_INT >= 23) {
-                format.setInteger(MediaFormat.KEY_LEVEL, level);
+            format.setInteger(MediaFormat.KEY_LEVEL, level);
 //            }
         }
         if (VERBOSE) {
@@ -91,6 +92,7 @@ final class VideoEncoder {
         mMediaCodec.start();
 
         // 创建复用器
+        if (VERBOSE) Log.d(TAG, "VideoEncoder: 开始录制：path=" + params.getVideoPath());
         mMediaMuxer = new MediaMuxer(params.getVideoPath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
         mTrackIndex = -1;
         mMuxerStarted = false;
@@ -126,6 +128,7 @@ final class VideoEncoder {
 
     /**
      * 编码一帧数据到复用器中
+     *
      * @param endOfStream
      */
     public void drainEncoder(boolean endOfStream) {
@@ -224,6 +227,7 @@ final class VideoEncoder {
 
     /**
      * 计算pts
+     *
      * @param info
      */
     private void calculateTimeUs(MediaCodec.BufferInfo info) {
@@ -237,6 +241,7 @@ final class VideoEncoder {
 
     /**
      * 获取编码的时长
+     *
      * @return
      */
     public long getDuration() {
@@ -246,6 +251,7 @@ final class VideoEncoder {
 
     /**
      * 获取视频参数
+     *
      * @return
      */
     public VideoParams getVideoParams() {

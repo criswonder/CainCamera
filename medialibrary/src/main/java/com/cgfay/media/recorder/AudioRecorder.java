@@ -4,6 +4,7 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.SystemClock;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import java.io.IOException;
@@ -33,6 +34,9 @@ public final class AudioRecorder implements Runnable {
     private int minBufferSize;
     // 录制状态监听器
     private OnRecordListener mRecordListener;
+
+    private String TAG = "AudioRecorder";
+    private boolean VERBOSE = true;
 
     public MediaType getMediaType() {
         return MediaType.AUDIO;
@@ -78,6 +82,7 @@ public final class AudioRecorder implements Runnable {
             } else {
                 mBufferSize = AudioEncoder.BUFFER_SIZE;
             }
+            if (VERBOSE) Log.d(TAG, "prepare: mBufferSize="+mBufferSize);
             mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, params.getSampleRate(),
                     params.getChannel(), params.getAudioFormat(), minBufferSize);
         } catch (Exception e) {
@@ -163,6 +168,7 @@ public final class AudioRecorder implements Runnable {
                 // 音频倍速转码输出
                 ByteBuffer outPut = mAudioTranscoder.getOutput();
                 if (outPut != null && outPut.hasRemaining()) {
+//                    if (VERBOSE) Log.d(TAG, "run: len="+outPut.remaining());
                     byte[] outData = new byte[outPut.remaining()];
                     outPut.get(outData);
                     synchronized (this) {
